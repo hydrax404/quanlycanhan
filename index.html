@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Personal Hub - Trang Quản Lý Cá Nhân</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React 18, ReactDOM & Babel để chạy JSX trực tiếp trên trình duyệt -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    /* Custom scrollbar mượt mà */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    .dark ::-webkit-scrollbar-thumb {
+      background: #334155;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // SVG Icons nội bộ siêu nhẹ, không phụ thuộc thư viện ngoài
+    const Icons = {
+      Dashboard: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>,
+      Wallet: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>,
+      Clock: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
+      Calendar: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>,
+      Flame: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/></svg>,
+      Note: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>,
+      Trash: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>,
+      Check: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"/></svg>,
+      Sun: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>,
+      Moon: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>,
+      Sparkles: () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>,
+      PanelLeft: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7"/></svg>
+    };
+
+    // Danh mục chi tiêu
+    const EXPENSE_CATEGORIES = [
+      { id: 'an_uong', name: 'Ăn uống', color: 'bg-orange-500', text: 'text-orange-600', bgLight: 'bg-orange-50' },
+      { id: 'di_chuyen', name: 'Di chuyển', color: 'bg-blue-500', text: 'text-blue-600', bgLight: 'bg-blue-50' },
+      { id: 'hoc_tap', name: 'Học tập', color: 'bg-indigo-500', text: 'text-indigo-600', bgLight: 'bg-indigo-50' },
+      { id: 'giai_tri', name: 'Giải trí', color: 'bg-purple-500', text: 'text-purple-600', bgLight: 'bg-purple-50' },
+      { id: 'mua_sam', name: 'Mua sắm', color: 'bg-pink-500', text: 'text-pink-600', bgLight: 'bg-pink-50' },
+      { id: 'luong_thuong', name: 'Lương/Thưởng', color: 'bg-emerald-500', text: 'text-emerald-600', bgLight: 'bg-emerald-50' },
+      { id: 'khac', name: 'Khác', color: 'bg-slate-500', text: 'text-slate-600', bgLight: 'bg-slate-100' }
+    ];
+
+    const DAYS_OF_WEEK = [
+      { id: 'T2', label: 'Thứ 2', full: 'Thứ Hai' },
+      { id: 'T3', label: 'Thứ 3', full: 'Thứ Ba' },
+      { id: 'T4', label: 'Thứ 4', full: 'Thứ Tư' },
+      { id: 'T5', label: 'Thứ 5', full: 'Thứ Năm' },
+      { id: 'T6', label: 'Thứ 6', full: 'Thứ Sáu' },
+      { id: 'T7', label: 'Thứ 7', full: 'Thứ Bảy' },
+      { id: 'CN', label: 'Chủ Nhật', full: 'Chủ Nhật' }
+    ];
+
+    const formatVND = (num) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(num) || 0);
+    const getTodayStr = () => new Date().toISOString().split('T')[0];
+    const getCurrentDayCode = () => {
+      const d = new Date().getDay();
+      return d === 0 ? 'CN' : `T${d + 1}`;
+    };
+
+    const loadLocal = (key, fallback) => {
+      try {
+        const item = localStorage.getItem(`personal_hub_${key}`);
+        return item ? JSON.parse(item) : fallback;
+      } catch {
+        return fallback;
+      }
+    };
+
+    function App() {
+      const [activeTab, setActiveTab] = useState('dashboard');
+      const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+      const [toast, setToast] = useState(null);
+      const [darkMode, setDarkMode] = useState(() => loadLocal('dark_mode', false));
+
+      // 6 Phân hệ dữ liệu tự lưu vào LocalStorage của trình duyệt
+      const [expenses, setExpenses] = useState(() => loadLocal('expenses', []));
+      const [schedules, setSchedules] = useState(() => loadLocal('schedules', []));
+      const [tasks, setTasks] = useState(() => loadLocal('tasks', []));
+      const [habits, setHabits] = useState(() => loadLocal('habits', []));
+      const [events, setEvents] = useState(() => loadLocal('events', []));
+      const [notes, setNotes] = useState(() => loadLocal('notes', []));
+
+      // State biểu mẫu
+      const [txTitle, setTxTitle] = useState('');
+      const [txAmount, setTxAmount] = useState('');
+      const [txType, setTxType] = useState('expense');
+      const [txCategory, setTxCategory] = useState('an_uong');
+      const [txDate, setTxDate] = useState(getTodayStr());
+
+      const [selectedDayTab, setSelectedDayTab] = useState(getCurrentDayCode());
+      const [schTitle, setSchTitle] = useState('');
+      const [schStart, setSchStart] = useState('08:00');
+      const [schEnd, setSchEnd] = useState('10:00');
+
+      const [taskTitle, setTaskTitle] = useState('');
+      const [habitTitle, setHabitTitle] = useState('');
+
+      const [noteTitle, setNoteTitle] = useState('');
+      const [noteContent, setNoteContent] = useState('');
+
+      const [evTitle, setEvTitle] = useState('');
+      const [evDate, setEvDate] = useState(getTodayStr());
+
+      // Tự động lưu khi có thay đổi dữ liệu
+      useEffect(() => {
+        localStorage.setItem('personal_hub_dark_mode', JSON.stringify(darkMode));
+        if (darkMode) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }, [darkMode]);
+
+      useEffect(() => {
+        localStorage.setItem('personal_hub_expenses', JSON.stringify(expenses));
+        localStorage.setItem('personal_hub_schedules', JSON.stringify(schedules));
+        localStorage.setItem('personal_hub_tasks', JSON.stringify(tasks));
+        localStorage.setItem('personal_hub_habits', JSON.stringify(habits));
+        localStorage.setItem('personal_hub_events', JSON.stringify(events));
+        localStorage.setItem('personal_hub_notes', JSON.stringify(notes));
+      }, [expenses, schedules, tasks, habits, events, notes]);
+
+      const showNotification = (msg) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 2500);
+      };
+
+      // Nạp dữ liệu mẫu
+      const loadDemoData = () => {
+        const today = getTodayStr();
+        const dayCode = getCurrentDayCode();
+        setExpenses([
+          { id: '1', title: 'Lương / Thu nhập tháng', amount: 10000000, type: 'income', category: 'luong_thuong', date: today },
+          { id: '2', title: 'Ăn trưa cơm văn phòng', amount: 55000, type: 'expense', category: 'an_uong', date: today },
+          { id: '3', title: 'Đổ xăng xe', amount: 60000, type: 'expense', category: 'di_chuyen', date: today }
+        ]);
+        setSchedules([
+          { id: 's1', day: dayCode, startTime: '08:00', endTime: '11:00', title: 'Làm việc / Học tập buổi sáng' },
+          { id: 's2', day: dayCode, startTime: '14:00', endTime: '17:00', title: 'Xử lý công việc chiều' }
+        ]);
+        setTasks([
+          { id: 't1', title: 'Hoàn thành báo cáo tuần', priority: 'high', completed: false },
+          { id: 't2', title: 'Dọn dẹp góc làm việc', priority: 'low', completed: true }
+        ]);
+        setHabits([
+          { id: 'h1', title: 'Đọc sách 20 trang', targetDays: 5, completedDays: { T2: true, [dayCode]: true } },
+          { id: 'h2', title: 'Uống đủ 2L nước', targetDays: 7, completedDays: { T2: true, T3: true, [dayCode]: true } }
+        ]);
+        setEvents([
+          { id: 'e1', title: 'Hạn chót nộp báo cáo', date: today, time: '23:59' }
+        ]);
+        setNotes([
+          { id: 'n1', title: 'Mục tiêu tháng này', content: 'Tập trung hoàn thành đúng hạn các dự án cá nhân và duy trì thói quen đọc sách.', color: 'yellow' }
+        ]);
+        showNotification('Đã nạp dữ liệu mẫu thành công!');
+      };
+
+      // Sao lưu dữ liệu JSON
+      const handleExportJSON = () => {
+        const data = { expenses, schedules, tasks, habits, events, notes };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `personal-hub-backup-${getTodayStr()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showNotification('Đã tải file sao lưu JSON về máy!');
+      };
+
+      // Khôi phục dữ liệu JSON
+      const handleImportJSON = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const parsed = JSON.parse(event.target.result);
+            if (parsed.expenses) setExpenses(parsed.expenses);
+            if (parsed.schedules) setSchedules(parsed.schedules);
+            if (parsed.tasks) setTasks(parsed.tasks);
+            if (parsed.habits) setHabits(parsed.habits);
+            if (parsed.events) setEvents(parsed.events);
+            if (parsed.notes) setNotes(parsed.notes);
+            showNotification('Đã khôi phục dữ liệu thành công!');
+          } catch {
+            showNotification('File JSON không đúng định dạng!');
+          }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+      };
+
+      // Thống kê tài chính
+      const financialStats = useMemo(() => {
+        let income = 0;
+        let expense = 0;
+        expenses.forEach((item) => {
+          if (item.type === 'income') income += Number(item.amount) || 0;
+          else expense += Number(item.amount) || 0;
+        });
+        return { income, expense, balance: income - expense };
+      }, [expenses]);
+
+      const todayDayCode = getCurrentDayCode();
+      const todaySchedules = schedules.filter((s) => s.day === todayDayCode);
+      const pendingTasks = tasks.filter((t) => !t.completed);
+      const todayEvents = events.filter((e) => e.date === getTodayStr());
+
+      const navTabs = [
+        { id: 'dashboard', label: 'Tổng quan', icon: Icons.Dashboard },
+        { id: 'expenses', label: 'Quản lý chi tiêu', icon: Icons.Wallet, badge: expenses.length },
+        { id: 'schedule', label: 'Thời gian biểu & Việc', icon: Icons.Clock, badge: pendingTasks.length },
+        { id: 'habits', label: 'Thói quen (Habits)', icon: Icons.Flame, badge: habits.length },
+        { id: 'calendar', label: 'Lịch sự kiện', icon: Icons.Calendar, badge: events.length },
+        { id: 'notes', label: 'Ghi chú & Mục tiêu', icon: Icons.Note, badge: notes.length }
+      ];
+
+      return (
+        <div className={`h-screen flex flex-row overflow-hidden font-sans ${darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-800'}`}>
+          {/* Thông báo toast */}
+          {toast && (
+            <div className="fixed top-4 right-4 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-lg border border-slate-700 text-xs font-semibold flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              {toast}
+            </div>
+          )}
+
+          {/* Sidebar */}
+          <aside className={`${isSidebarCollapsed ? 'w-14' : 'w-48'} h-screen bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 select-none transition-all duration-200 z-30 shadow-xs`}>
+            <div>
+              <div className="px-3 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div className={`flex items-center gap-2 overflow-hidden ${isSidebarCollapsed ? 'justify-center w-full' : ''}`}>
+                  <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                    <Icons.Sparkles />
+                  </div>
+                  {!isSidebarCollapsed && (
+                    <div className="truncate">
+                      <h1 className="font-bold text-xs leading-tight truncate">Personal Hub</h1>
+                      <p className="text-[10px] text-slate-400">Quản lý cá nhân</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-2 space-y-1">
+                {navTabs.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`relative w-full flex items-center ${isSidebarCollapsed ? 'justify-center p-2' : 'justify-between px-2.5 py-2'} rounded-xl text-left transition ${
+                        isActive
+                          ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400 font-semibold'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      {isActive && <span className="absolute left-0 top-2 bottom-2 w-1 bg-indigo-600 rounded-r-full" />}
+                      <div className="flex items-center gap-2.5 truncate">
+                        <Icon />
+                        {!isSidebarCollapsed && <span className="text-xs truncate">{tab.label}</span>}
+                      </div>
+                      {!isSidebarCollapsed && tab.badge > 0 && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold">
+                          {tab.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="p-2 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
+              {!isSidebarCollapsed ? (
+                <>
+                  <button
+                    onClick={loadDemoData}
+                    className="w-full py-1.5 px-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[11px] font-semibold transition"
+                  >
+                    Nạp dữ liệu mẫu
+                  </button>
+                  <div className="grid grid-cols-2 gap-1 text-[10px]">
+                    <button
+                      onClick={handleExportJSON}
+                      className="py-1 px-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-300 font-semibold"
+                    >
+                      Xuất JSON
+                    </button>
+                    <label className="py-1 px-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-300 font-semibold text-center cursor-pointer">
+                      Nhập JSON
+                      <input type="file" accept=".json" onChange={handleImportJSON} className="hidden" />
+                    </label>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center gap-1.5">
+                  <button onClick={loadDemoData} title="Nạp dữ liệu mẫu" className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600">
+                    <Icons.Sparkles />
+                  </button>
+                </div>
+              )}
+            </div>
+          </aside>
+
+          {/* Main Content */}
+          <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+            <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-20 px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2.5">
+                <button
+                  onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                  className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+                >
+                  <Icons.PanelLeft />
+                </button>
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold truncate">
+                    {navTabs.find((t) => t.id === activeTab)?.label}
+                  </h2>
+                  <p className="text-[11px] text-slate-500">
+                    {DAYS_OF_WEEK.find((d) => d.id === todayDayCode)?.full}, ngày {getTodayStr().split('-').reverse().join('/')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setDarkMode(!darkMode)}
+                  className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-amber-400 hover:bg-slate-100"
+                >
+                  {darkMode ? <Icons.Sun /> : <Icons.Moon />}
+                </button>
+
+                <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl text-xs">
+                  <span className="text-slate-500 dark:text-slate-400">Số dư:</span>
+                  <span className={`font-bold ${financialStats.balance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {formatVND(financialStats.balance)}
+                  </span>
+                </div>
+              </div>
+            </header>
+
+            <main className="p-4 sm:p-6 max-w-6xl w-full mx-auto space-y-5">
+              {/* TAB 1: TỔNG QUAN */}
+              {activeTab === 'dashboard' && (
+                <div className="space-y-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 text-white p-4 rounded-2xl shadow-xs">
+                      <span className="text-xs text-indigo-200">Số dư khả dụng</span>
+                      <div className="text-xl font-bold mt-1">{formatVND(financialStats.balance)}</div>
+                      <p className="text-[11px] text-indigo-200 mt-2">Tổng thu: {formatVND(financialStats.income)}</p>
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+                      <span className="text-xs text-slate-500">Tổng chi tiêu</span>
+                      <div className="text-xl font-bold text-rose-600 mt-1">{formatVND(financialStats.expense)}</div>
+                      <p className="text-[11px] text-slate-400 mt-2">{expenses.length} giao dịch đã ghi chép</p>
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+                      <span className="text-xs text-slate-500">Lịch trình & Việc hôm nay</span>
+                      <div className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1">
+                        {todaySchedules.length} lịch • {pendingTasks.length} việc
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-2">{todayEvents.length} sự kiện trong ngày</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-xs uppercase tracking-wider text-orange-600 flex items-center gap-1.5">
+                        <Icons.Flame />
+                        Thói quen hôm nay ({habits.filter((h) => h.completedDays?.[todayDayCode]).length}/{habits.length})
+                      </h3>
+                      <button onClick={() => setActiveTab('habits')} className="text-xs text-indigo-600 hover:underline">
+                        Mở bảng tuần →
+                      </button>
+                    </div>
+                    {habits.length === 0 ? (
+                      <p className="text-xs text-slate-400 py-2">Chưa có thói quen nào. Bấm nút Nạp dữ liệu mẫu để thử nhé!</p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        {habits.map((h) => {
+                          const isDone = Boolean(h.completedDays?.[todayDayCode]);
+                          return (
+                            <button
+                              key={h.id}
+                              onClick={() => {
+                                const updated = { ...(h.completedDays || {}), [todayDayCode]: !isDone };
+                                setHabits(habits.map((item) => (item.id === h.id ? { ...item, completedDays: updated } : item)));
+                              }}
+                              className={`p-3 rounded-xl border text-left flex items-center justify-between text-xs font-semibold transition ${
+                                isDone
+                                  ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 text-emerald-800 dark:text-emerald-300'
+                                  : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                              }`}
+                            >
+                              <span className="truncate">{h.title}</span>
+                              <span className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${isDone ? 'bg-emerald-600 text-white' : 'border border-slate-300'}`}>
+                                {isDone && <Icons.Check />}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: QUẢN LÝ CHI TIÊU */}
+              {activeTab === 'expenses' && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                  <div className="lg:col-span-5 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                    <h3 className="font-bold text-sm">Thêm khoản thu / chi</h3>
+                    <div className="grid grid-cols-2 gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold">
+                      <button
+                        type="button"
+                        onClick={() => setTxType('expense')}
+                        className={`py-1.5 rounded-lg ${txType === 'expense' ? 'bg-white dark:bg-slate-700 text-rose-600 shadow-xs' : 'text-slate-500'}`}
+                      >
+                        Khoản chi (-)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTxType('income')}
+                        className={`py-1.5 rounded-lg ${txType === 'income' ? 'bg-white dark:bg-slate-700 text-emerald-600 shadow-xs' : 'text-slate-500'}`}
+                      >
+                        Khoản thu (+)
+                      </button>
+                    </div>
+
+                    <input
+                      type="text"
+                      placeholder="Nội dung (VD: Ăn trưa, Đổ xăng...)"
+                      value={txTitle}
+                      onChange={(e) => setTxTitle(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-xs"
+                    />
+
+                    <input
+                      type="number"
+                      placeholder="Số tiền (VNĐ)"
+                      value={txAmount}
+                      onChange={(e) => setTxAmount(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-xs"
+                    />
+
+                    <div className="flex flex-wrap gap-1">
+                      {[30000, 50000, 100000, 200000, 500000].map((amt) => (
+                        <button
+                          key={amt}
+                          type="button"
+                          onClick={() => setTxAmount(String(amt))}
+                          className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[11px] text-slate-600 dark:text-slate-300"
+                        >
+                          {amt / 1000}k
+                        </button>
+                      ))}
+                    </div>
+
+                    <select
+                      value={txCategory}
+                      onChange={(e) => setTxCategory(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-xs"
+                    >
+                      {EXPENSE_CATEGORIES.map((c) => (
+                        <option key={c.id} value={c.id} className="dark:bg-slate-800">{c.name}</option>
+                      ))}
+                    </select>
+
+                    <button
+                      onClick={() => {
+                        if (!txTitle.trim() || !Number(txAmount)) return;
+                        setExpenses([{ id: Date.now().toString(), title: txTitle, amount: Number(txAmount), type: txType, category: txCategory, date: txDate }, ...expenses]);
+                        setTxTitle('');
+                        setTxAmount('');
+                        showNotification('Đã ghi lại giao dịch!');
+                      }}
+                      className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold"
+                    >
+                      Lưu giao dịch
+                    </button>
+                  </div>
+
+                  <div className="lg:col-span-7 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                    <h3 className="font-bold text-sm">Lịch sử giao dịch ({expenses.length})</h3>
+                    {expenses.length === 0 ? (
+                      <p className="text-xs text-slate-400 py-8 text-center">Chưa có giao dịch nào.</p>
+                    ) : (
+                      <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+                        {expenses.map((tx) => {
+                          const cat = EXPENSE_CATEGORIES.find((c) => c.id === tx.category) || EXPENSE_CATEGORIES[6];
+                          return (
+                            <div key={tx.id} className="p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+                              <div>
+                                <p className="font-bold">{tx.title}</p>
+                                <span className="text-[11px] text-slate-400">{cat.name} • {tx.date}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className={`font-bold ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                  {tx.type === 'income' ? '+' : '-'}{formatVND(tx.amount)}
+                                </span>
+                                <button
+                                  onClick={() => setExpenses(expenses.filter((i) => i.id !== tx.id))}
+                                  className="p-1 text-slate-400 hover:text-rose-600"
+                                >
+                                  <Icons.Trash />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: THỜI GIAN BIỂU & VIỆC */}
+              {activeTab === 'schedule' && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                  <div className="lg:col-span-7 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+                    <h3 className="font-bold text-sm">Thời gian biểu theo Thứ</h3>
+                    <div className="grid grid-cols-7 gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                      {DAYS_OF_WEEK.map((d) => (
+                        <button
+                          key={d.id}
+                          onClick={() => setSelectedDayTab(d.id)}
+                          className={`py-1.5 rounded-lg text-xs font-bold transition ${
+                            selectedDayTab === d.id ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400'
+                          }`}
+                        >
+                          {d.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                      <input
+                        type="text"
+                        placeholder="Nội dung lịch trình..."
+                        value={schTitle}
+                        onChange={(e) => setSchTitle(e.target.value)}
+                        className="sm:col-span-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-xs"
+                      />
+                      <input
+                        type="time"
+                        value={schStart}
+                        onChange={(e) => setSchStart(e.target.value)}
+                        className="px-2 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-xs"
+                      />
+                      <button
+                        onClick={() => {
+                          if (!schTitle.trim()) return;
+                          setSchedules([...schedules, { id: Date.now().toString(), day: selectedDayTab, startTime: schStart, endTime: schEnd, title: schTitle }]);
+                          setSchTitle('');
+                          showNotification('Đã thêm lịch!');
+                        }}
+                        className="py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold"
+                      >
+                        + Thêm lịch
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {schedules.filter((s) => s.day === selectedDayTab).map((item) => (
+                        <div key={item.id} className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+                          <div>
+                            <span className="font-bold text-indigo-600 mr-2">{item.startTime}</span>
+                            <span className="font-semibold">{item.title}</span>
+                          </div>
+                          <button onClick={() => setSchedules(schedules.filter((s) => s.id !== item.id))} className="text-slate-400 hover:text-rose-600">
+                            <Icons.Trash />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-5 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+                    <h3 className="font-bold text-sm">Danh sách việc cần làm (To-Do)</h3>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Thêm đầu việc mới..."
+                        value={taskTitle}
+                        onChange={(e) => setTaskTitle(e.target.value)}
+                        className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-xs"
+                      />
+                      <button
+                        onClick={() => {
+                          if (!taskTitle.trim()) return;
+                          setTasks([{ id: Date.now().toString(), title: taskTitle, priority: 'medium', completed: false }, ...tasks]);
+                          setTaskTitle('');
+                        }}
+                        className="px-3 py-2 bg-indigo-600 text-white rounded-xl text-xs font-semibold"
+                      >
+                        Thêm
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {tasks.map((t) => (
+                        <div key={t.id} className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+                          <button
+                            onClick={() => setTasks(tasks.map((item) => (item.id === t.id ? { ...item, completed: !item.completed } : item)))}
+                            className={`flex items-center gap-2 text-left ${t.completed ? 'line-through text-slate-400' : 'font-medium'}`}
+                          >
+                            <span className={`w-4 h-4 rounded flex items-center justify-center border ${t.completed ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-400'}`}>
+                              {t.completed && <Icons.Check />}
+                            </span>
+                            <span>{t.title}</span>
+                          </button>
+                          <button onClick={() => setTasks(tasks.filter((item) => item.id !== t.id))} className="text-slate-400 hover:text-rose-600">
+                            <Icons.Trash />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: THÓI QUEN */}
+              {activeTab === 'habits' && (
+                <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-bold text-sm flex items-center gap-1.5">
+                      <Icons.Flame /> Bảng theo dõi Thói quen trong tuần (T2 - CN)
+                    </h3>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Tên thói quen mới..."
+                        value={habitTitle}
+                        onChange={(e) => setHabitTitle(e.target.value)}
+                        className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-xs"
+                      />
+                      <button
+                        onClick={() => {
+                          if (!habitTitle.trim()) return;
+                          setHabits([...habits, { id: Date.now().toString(), title: habitTitle, targetDays: 5, completedDays: {} }]);
+                          setHabitTitle('');
+                          showNotification('Đã thêm thói quen!');
+                        }}
+                        className="px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-xs font-semibold"
+                      >
+                        + Thêm
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500">
+                          <th className="py-2.5 px-3">Thói quen</th>
+                          {DAYS_OF_WEEK.map((d) => (
+                            <th key={d.id} className="py-2.5 px-2 text-center">{d.label}</th>
+                          ))}
+                          <th className="py-2.5 px-2 text-center">Xóa</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {habits.map((h) => (
+                          <tr key={h.id}>
+                            <td className="py-3 px-3 font-semibold">{h.title}</td>
+                            {DAYS_OF_WEEK.map((d) => {
+                              const checked = Boolean(h.completedDays?.[d.id]);
+                              return (
+                                <td key={d.id} className="py-2 px-2 text-center">
+                                  <button
+                                    onClick={() => {
+                                      const updated = { ...(h.completedDays || {}), [d.id]: !checked };
+                                      setHabits(habits.map((item) => (item.id === h.id ? { ...item, completedDays: updated } : item)));
+                                    }}
+                                    className={`w-7 h-7 rounded-lg inline-flex items-center justify-center border transition ${
+                                      checked ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 dark:border-slate-700'
+                                    }`}
+                                  >
+                                    {checked && <Icons.Check />}
+                                  </button>
+                                </td>
+                              );
+                            })}
+                            <td className="py-2 px-2 text-center">
+                              <button onClick={() => setHabits(habits.filter((item) => item.id !== h.id))} className="text-slate-400 hover:text-rose-600">
+                                <Icons.Trash />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 5: LỊCH SỰ KIỆN */}
+              {activeTab === 'calendar' && (
+                <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+                  <h3 className="font-bold text-sm">Lịch sự kiện & Deadline</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                    <input
+                      type="text"
+                      placeholder="Tên sự kiện / Hạn chót..."
+                      value={evTitle}
+                      onChange={(e) => setEvTitle(e.target.value)}
+                      className="sm:col-span-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-xs"
+                    />
+                    <input
+                      type="date"
+                      value={evDate}
+                      onChange={(e) => setEvDate(e.target.value)}
+                      className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-xs"
+                    />
+                    <button
+                      onClick={() => {
+                        if (!evTitle.trim()) return;
+                        setEvents([...events, { id: Date.now().toString(), title: evTitle, date: evDate, time: '09:00' }]);
+                        setEvTitle('');
+                        showNotification('Đã lưu sự kiện!');
+                      }}
+                      className="py-2 bg-indigo-600 text-white rounded-xl text-xs font-semibold"
+                    >
+                      + Thêm sự kiện
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {events.map((ev) => (
+                      <div key={ev.id} className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+                        <div>
+                          <span className="font-bold text-indigo-600 mr-2">{ev.date.split('-').reverse().join('/')}</span>
+                          <span className="font-semibold">{ev.title}</span>
+                        </div>
+                        <button onClick={() => setEvents(events.filter((item) => item.id !== ev.id))} className="text-slate-400 hover:text-rose-600">
+                          <Icons.Trash />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 6: GHI CHÚ */}
+              {activeTab === 'notes' && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                  <div className="lg:col-span-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                    <h3 className="font-bold text-sm">Tạo ghi chú mới</h3>
+                    <input
+                      type="text"
+                      placeholder="Tiêu đề..."
+                      value={noteTitle}
+                      onChange={(e) => setNoteTitle(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-xs"
+                    />
+                    <textarea
+                      rows="4"
+                      placeholder="Nội dung ghi chú..."
+                      value={noteContent}
+                      onChange={(e) => setNoteContent(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-xs"
+                    ></textarea>
+                    <button
+                      onClick={() => {
+                        if (!noteTitle.trim() && !noteContent.trim()) return;
+                        setNotes([{ id: Date.now().toString(), title: noteTitle || 'Ghi chú', content: noteContent, color: 'yellow' }, ...notes]);
+                        setNoteTitle('');
+                        setNoteContent('');
+                        showNotification('Đã lưu ghi chú!');
+                      }}
+                      className="w-full py-2 bg-indigo-600 text-white rounded-xl text-xs font-semibold"
+                    >
+                      Lưu ghi chú
+                    </button>
+                  </div>
+
+                  <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {notes.map((n) => (
+                      <div key={n.id} className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-between space-y-2 text-xs">
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-bold text-sm">{n.title}</h4>
+                            <button onClick={() => setNotes(notes.filter((item) => item.id !== n.id))} className="text-slate-400 hover:text-rose-600">
+                              <Icons.Trash />
+                            </button>
+                          </div>
+                          <p className="text-slate-600 dark:text-slate-400 mt-1 whitespace-pre-line">{n.content}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </main>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
